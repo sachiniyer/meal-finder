@@ -2,6 +2,8 @@ import Sidebar from "../components/Sidebar";
 import Chat from "../components/Chat";
 import { ChatProvider } from "../context/ChatContext";
 
+console.log('Backend URL:', process.env.NEXT_PUBLIC_BACKEND_URL);
+
 export default function Home() {
   return (
     <ChatProvider>

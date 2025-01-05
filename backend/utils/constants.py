@@ -1,4 +1,9 @@
+"""Constants file."""
+
+
 class Constants:
+    """Constants Class."""
+
     AVAILABLE_SEARCH_FIELDS = {
         # NOTE(dev): Places Basic SKU
         "accessibilityOptions",
