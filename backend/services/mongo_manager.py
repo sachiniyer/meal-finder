@@ -1,35 +1,41 @@
+"""
+MongoDB service for managing chat and place data.
+
+This module provides functionality to:
+- Initialize and manage MongoDB connections
+- Handle CRUD operations for chat data
+- Handle CRUD operations for place data
+- Cache place information from external APIs
+
+NOTE(dev): This module assumes MongoDB is running and accessible.
+"""
+
 import uuid
-from pymongo import MongoClient
-from config import Config
-from utils.logger import logger
-import json
 from pymongo import UpdateOne
+from typing import Optional, Dict, Any, List
+from utils.logger import logger
+from utils.clients import api_client_manager
+import json
 from time import time
-from typing import Any
 
-# Initialize MongoDB client and get database
-MONGODB_URI = f"mongodb://{Config.MONGODB_USER}:{Config.MONGODB_PASSWORD}@{Config.MONGODB_HOST}/{Config.MONGODB_DATABASE}?authSource={Config.MONGODB_DATABASE}"
 
-logger.info("Initializing MongoDB client")
-client = MongoClient(MONGODB_URI)
-db = client[Config.MONGODB_DATABASE]
-
-try:
-    # The serverStatus command requires admin privileges, so we'll use a simpler command
-    client.admin.command("ping")
-    logger.info("Successfully connected to MongoDB")
-except Exception as e:
-    logger.error(
-        f"Failed to connect to MongoDB: {str(e)}, {MONGODB_URI}, {Config.MONGODB_DATABASE}"
-    )
-    raise
-
-# Get collections (equivalent to our previous DynamoDB tables)
-chats_collection = db["chats"]
-places_collection = db["places"]
+# TODO(siyer): Avoid global variables, and just put this logic into each function
+chats_collection = api_client_manager.mongodb_db["chats"]
+places_collection = api_client_manager.mongodb_db["places"]
 
 
 def create_chat_data(location: dict):
+    """
+    Create a new chat document in MongoDB.
+
+    Args:
+        location (dict): Location data to associate with chat
+
+    Returns:
+        dict: The created chat document
+
+    NOTE(dev): Thread ID is initialized as None and set later when OpenAI requests are made
+    """
     new_chat_id = str(uuid.uuid4())
     logger.info(f"Creating new chat with ID: {new_chat_id}")
 
@@ -37,9 +43,9 @@ def create_chat_data(location: dict):
         "chat_id": new_chat_id,
         "messages": [],
         "places": [],
-        "thread_id": None,  # NOTE(dev): This get initialized later when OpenAI requests are made
+        "thread_id": None,
         "location": location,
-        "created_at": int(time()),  # Unix timestamp in seconds
+        "created_at": int(time()),
     }
 
     try:
@@ -56,24 +62,10 @@ def create_chat_data(location: dict):
         raise
 
 
-def create_or_get_chat_data(chat_id=None):
-    """
-    If chat_id is provided, try to retrieve from MongoDB. If not found, create a new item.
-    If chat_id is not provided, create a new chat in MongoDB.
-    """
-    if chat_id:
-        logger.debug(f"Attempting to retrieve existing chat: {chat_id}")
-        existing = get_chat_data(chat_id)
-        if existing:
-            logger.info(f"Found existing chat: {chat_id}")
-            return existing
-
-    return create_chat_data()
-
-
-def get_chat_data(chat_id):
+def get_chat_data(chat_id: str):
     """
     Retrieve the chat document from MongoDB by chat_id.
+
     Returns None if not found.
     """
     logger.debug(f"Retrieving chat data for ID: {chat_id}")
@@ -89,43 +81,19 @@ def get_chat_data(chat_id):
         raise
 
 
-def update_chat_data(chat_id, new_data):
+def update_chat_data_field(chat_id: str, field: str, value: Any) -> Any:
     """
-    Update or insert (upsert) chat data in MongoDB.
+    Update a singular field of the chat object with a given value.
+
+    Args:
+        chat_id (str): The chat ID to query
+        field (str): The field name to retrieve
+        default (Any): Value to set the field to
+
+    Returns:
+       chat_data (Any): The chat data
+
     """
-    logger.debug(f"Updating chat data for ID: {chat_id}")
-    logger.debug(f"New data to update: {json.dumps(new_data, indent=2)}")
-
-    # Ensure chat_id is consistent
-    new_data["chat_id"] = chat_id
-
-    try:
-        # Use update_one instead of replace_one to see if the update actually happened
-        result = chats_collection.update_one(
-            {"chat_id": chat_id}, {"$set": new_data}, upsert=True
-        )
-
-        logger.debug(
-            f"MongoDB update result - matched: {result.matched_count}, modified: {result.modified_count}, upserted_id: {result.upserted_id}"
-        )
-
-        # Verify the update by retrieving the document
-        updated_doc = chats_collection.find_one({"chat_id": chat_id}, {"_id": 0})
-        logger.debug(
-            f"Retrieved document after update: {json.dumps(updated_doc, indent=2)}"
-        )
-
-        if "thread_id" not in updated_doc:
-            logger.error("thread_id not found in updated document!")
-
-        return updated_doc
-
-    except Exception as e:
-        logger.error(f"Error updating chat data: {str(e)}", exc_info=True)
-        raise
-
-
-def update_chat_data_field(chat_id, field, value):
     logger.debug(f"Updating chat data for ID: {chat_id}")
     logger.debug(f"New data to update: {field} with value: {value}")
     try:
@@ -164,9 +132,15 @@ def get_chat_data_field(chat_id: str, field: str, default: Any = None) -> Any:
     return chat_data.get(field, default)
 
 
-def add_chat_message(chat_id, message):
+def add_chat_message(chat_id: str, message: str) -> Any:
     """
     Add a message to the chat data.
+
+    Args:
+        chat_id (str): The chat ID to update
+        message (str): The message to add
+    Returns:
+        chat_data (Any): The updated chat data
     """
     logger.debug(f"Adding message to chat data for ID: {chat_id}")
     logger.debug(f"Message to add: {message}")
@@ -186,10 +160,16 @@ def add_chat_message(chat_id, message):
         raise
 
 
-def append_places(places: list):
+def append_places(places: List[Dict[str, Any]]) -> None:
     """
     Append multiple places to the places collection.
-    Converts 'id' to 'place_id' and prevents overwriting existing records.
+
+    Uses bulk operations for efficiency and prevents duplicate entries.
+
+    Args:
+        places (List[Dict[str, Any]]): List of place documents to store
+
+    NOTE(dev): Converts 'id' to 'place_id' for consistency in the database
     """
     logger.debug(f"Appending {len(places)} places to the collection")
     try:
@@ -220,58 +200,49 @@ def append_places(places: list):
         raise
 
 
-def add_place_fields(place_id: str, fields: dict):
+def get_place(place_id: str) -> Optional[Dict[str, Any]]:
     """
-    Add fields to an existing place.
+    Retrieve a place document by its ID.
+
+    Args:
+        place_id (str): The place ID to retrieve
+
+    Returns:
+        Optional[Dict[str, Any]]: The place document or None if not found
     """
-    logger.debug(f"Adding fields to place: {place_id}")
-    logger.debug(f"Fields to add: {fields}")
     try:
-        result = places_collection.update_one(
-            {"place_id": place_id}, {"$set": fields}, upsert=True
-        )
-        logger.debug(
-            f"MongoDB update result - matched: {result.matched_count}, modified: {result.modified_count}, upserted_id: {result.upserted_id}"
-        )
-
-        updated_doc = places_collection.find_one({"place_id": place_id}, {"_id": 0})
-        logger.debug(
-            f"Retrieved document after update: {json.dumps(updated_doc, indent=2)}"
-        )
-
-        return updated_doc
+        return places_collection.find_one({"place_id": place_id}, {"_id": 0})
     except Exception as e:
-        logger.error(f"Error adding fields to place: {str(e)}", exc_info=True)
+        logger.error(f"Error retrieving place: {str(e)}", exc_info=True)
         raise
 
 
-def get_place(place_id):
+def update_place_field(place_id: str, field: str, value: Any) -> Dict[str, Any]:
     """
-    Retrieve a place by place_id.
+    Update a specific field in a place document.
+
+    Args:
+        place_id (str): The place ID to update
+        field (str): The field name to update
+        value (Any): The new value to set
+
+    Returns:
+        Dict[str, Any]: The updated place document
     """
-    return places_collection.find_one({"place_id": place_id}, {"_id": 0})
-
-
-def update_place(place_id, updated_data):
-    """
-    Update an existing place.
-    """
-    updated_data["place_id"] = place_id
-    places_collection.replace_one({"place_id": place_id}, updated_data, upsert=True)
-    return updated_data
-
-
-def update_place_field(place_id, field, value):
     logger.debug(f"Updating place data for ID: {place_id}")
     logger.debug(f"New data to update: {field} with value: {value}")
     try:
         place_data = get_place(place_id)
+        if not place_data:
+            place_data = {"place_id": place_id}
         place_data[field] = value
         result = places_collection.update_one(
             {"place_id": place_id}, {"$set": place_data}, upsert=True
         )
         logger.debug(
-            f"MongoDB update result - matched: {result.matched_count}, modified: {result.modified_count}, upserted_id: {result.upserted_id}"
+            f"MongoDB update result - matched: {result.matched_count}, "
+            f"modified: {result.modified_count}, "
+            f"upserted_id: {result.upserted_id}"
         )
 
         return place_data
@@ -280,50 +251,40 @@ def update_place_field(place_id, field, value):
         raise
 
 
-# Optional: Add some MongoDB-specific helper functions
-def create_indexes():
+def get_all_chats() -> List[Dict[str, Any]]:
     """
-    Create indexes for better query performance.
-    Call this when setting up your application.
+    Get all chat documents, sorted by creation time.
+
+    Returns:
+        List[Dict[str, Any]]: List of all chat documents
+
+    NOTE(dev): Excludes MongoDB _id field from results
     """
-    chats_collection.create_index("chat_id", unique=True)
-    places_collection.create_index("place_id", unique=True)
+    try:
+        return list(chats_collection.find({}, {"_id": 0}).sort("created_at", -1))
+    except Exception as e:
+        logger.error(f"Error retrieving all chats: {str(e)}", exc_info=True)
+        raise
 
 
-def get_all_chats():
+def get_place_summary(place_id: str) -> Optional[Dict[str, Any]]:
     """
-    Get all chats (with optional pagination).
-    """
-    return list(chats_collection.find({}, {"_id": 0}))
+    Get a minimal summary of a place, typically for display in lists.
 
+    Args:
+        place_id (str): The place ID to query
 
-def get_all_places():
+    Returns:
+        Optional[Dict[str, Any]]: Dictionary containing:
+            - place_id (str): Place identifier
+            - editorialSummary (dict, optional): Place description
+            - displayName (dict): Place name information
     """
-    Get all places (with optional pagination).
-    """
-    return list(places_collection.find({}, {"_id": 0}))
-
-
-def get_places_for_ids(place_ids: list):
-    """
-    Retrieve place documents from the 'places' collection for the given place_ids.
-    """
-    logger.debug(f"Retrieving documents for place_ids: {place_ids}")
-    if not place_ids:
-        return []
-    # Using $in to fetch any matching place_ids
-    cursor = places_collection.find(
-        {"place_id": {"$in": place_ids}}, {"_id": 0}  # omit the Mongo _id field
-    )
-    return list(cursor)
-
-
-def get_place_summary(place_id: str):
-    """
-    Retrieve the editorial summary for a place.
-    """
-    place_doc = places_collection.find_one(
-        {"place_id": place_id},
-        {"_id": 0, "place_id": 1, "editorialSummary": 1, "displayName": 1},
-    )
-    return place_doc
+    try:
+        return places_collection.find_one(
+            {"place_id": place_id},
+            {"_id": 0, "place_id": 1, "editorialSummary": 1, "displayName": 1},
+        )
+    except Exception as e:
+        logger.error(f"Error retrieving place summary: {str(e)}", exc_info=True)
+        raise

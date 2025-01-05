@@ -3,16 +3,18 @@ Client session management for Socket.IO connections and API clients.
 
 This module provides singleton managers to handle:
 - Socket.IO sessions and chat rooms
-- API client instances (Exa, Yelp, AWS, Google Maps, etc.)
+- API client instances (Exa, Yelp, AWS, MongoDB, etc.)
 """
 
 from flask_socketio import SocketIO
 from exa_py import Exa
 import boto3
 from botocore.config import Config as BotoConfig
+from pymongo import MongoClient
 from utils.logger import logger
 from typing import Optional, Set, Dict
 from config import Config
+from openai import OpenAI
 
 
 class APIClientManager:
@@ -25,7 +27,8 @@ class APIClientManager:
         exa (Exa): The Exa API client instance
         yelp_headers (dict): Headers for Yelp API requests
         bedrock_client: AWS Bedrock client for AI image processing
-        google_maps_headers (dict): Headers for Google Maps API requests
+        mongodb (MongoClient): MongoDB client instance
+        mongodb_db: MongoDB database instance
     """
     
     _instance = None
@@ -54,6 +57,29 @@ class APIClientManager:
             "Content-Type": "application/json",
             "X-Goog-Api-Key": Config.GOOGLE_MAPS_API_KEY,
         }
+        
+        # Initialize MongoDB client
+        mongodb_uri = (
+            f"mongodb://{Config.MONGODB_USER}:{Config.MONGODB_PASSWORD}"
+            f"@{Config.MONGODB_HOST}/{Config.MONGODB_DATABASE}"
+            f"?authSource={Config.MONGODB_DATABASE}"
+        )
+        
+        logger.info("Initializing MongoDB client")
+        try:
+            self.mongodb = MongoClient(mongodb_uri)
+            self.mongodb_db = self.mongodb[Config.MONGODB_DATABASE]
+            
+            # Verify connection
+            self.mongodb.admin.command("ping")
+            logger.info("Successfully connected to MongoDB")
+            
+        except Exception as e:
+            logger.error(
+                f"Failed to connect to MongoDB: {str(e)}, {mongodb_uri}, "
+                f"{Config.MONGODB_DATABASE}"
+            )
+            raise
         
         # Initialize AWS Bedrock client
         boto_config = BotoConfig(
@@ -85,6 +111,10 @@ class APIClientManager:
             aws_secret_access_key=Config.AWS_SECRET_ACCESS_KEY,
         )
         sts_client.get_caller_identity()
+        
+        # Initialize OpenAI client
+        logger.info("Initializing OpenAI client")
+        self.openai = OpenAI(api_key=Config.OPENAI_API_KEY)
         
         self._initialized = True
         logger.info("Initialized APIClientManager singleton")

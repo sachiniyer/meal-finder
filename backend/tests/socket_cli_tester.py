@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+#
+# pydocstyle: disable
 import socketio
 import argparse
 import json
@@ -8,11 +10,11 @@ from dotenv import load_dotenv
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
-from rich import print as rprint
 import asyncio
 
 # Load environment variables from .env file
 load_dotenv()
+
 
 class SocketChatTester:
     def __init__(self, base_url, output_dir="test_outputs", location=None):
@@ -21,8 +23,8 @@ class SocketChatTester:
         self.console = Console()
         self.output_dir = output_dir
         self.location = location or {"latitude": 43.000000, "longitude": -75.000000}
-        self.api_token = os.getenv('API_TOKEN')
-        
+        self.api_token = os.getenv("API_TOKEN")
+
         if not self.api_token:
             raise ValueError("API_TOKEN environment variable is required")
 
@@ -115,10 +117,7 @@ class SocketChatTester:
         """Connect to the Socket.IO server"""
         try:
             url_with_query = f"{self.base_url}?token={self.api_token}"
-            self.sio.connect(
-                url_with_query,
-                auth={'token': self.api_token}
-            )
+            self.sio.connect(url_with_query, auth={"token": self.api_token})
         except Exception as e:
             self.console.print(f"[red]Error connecting to server: {str(e)}")
             raise
