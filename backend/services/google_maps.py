@@ -1,11 +1,17 @@
 """
-This service interacts with the Google Maps Places API v1 to perform text search queries.
+Google Maps Places API service for location-based search and place details.
 
+This module provides functionality to:
+- Search for places using text queries and location
+- Retrieve detailed place information
+- Manage place photos and data
+- Cache results in MongoDB
 """
 
 import requests
-from config import Config
+from typing import Dict, Any, List, Optional, Union, Tuple
 from utils.logger import logger
+from utils.clients import api_client_manager
 from services.mongo_manager import (
     get_place,
     append_places,
@@ -14,32 +20,41 @@ from services.mongo_manager import (
     get_chat_data,
     get_place_summary,
 )
-
 from utils.constants import Constants
+from config import Config
 
 
-def search_google_maps(query: str, radius: int, limit: int, chat_id: str):
+def search_google_maps(
+    query: str, 
+    radius: int = 5000, 
+    limit: int = 5, 
+    chat_id: str = None
+) -> List[Dict[str, Any]]:
     """
     Perform a text search using the Google Maps Places API v1.
 
+    This function:
+    1. Gets user location from chat data if available
+    2. Executes the search with location bias
+    3. Stores results in MongoDB
+    4. Associates places with the chat
+
     Args:
         query (str): The search query (e.g., "pizza near me")
-        location (dict, optional): Dictionary containing latitude and longitude
+        radius (int, optional): Search radius in meters. Defaults to 5000.
+        limit (int, optional): Maximum number of results. Defaults to 5.
+        chat_id (str, optional): Chat ID for location bias and place association.
 
     Returns:
-        list: List of places matching the search criteria
+        List[Dict[str, Any]]: List of places matching the search criteria.
+        Each place contains basic fields like name, address, and location.
     """
+    location = get_chat_data_field(chat_id, "location") if chat_id else None
+    logger.info(f"Executing Google Maps search for query: {query}, location: {location}")
 
-    location = get_chat_data_field(chat_id, "location")
-
-    logger.info(
-        f"Executing Google Maps search for query: {query}, location: {location}"
-    )
-
-    # Prepare headers
+    # Prepare headers with default fields
     headers = {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": Config.GOOGLE_MAPS_API_KEY,
+        **api_client_manager.google_maps_headers,
         "X-Goog-FieldMask": ",".join(
             [f"places.{field}" for field in Constants.DEFAULT_SEARCH_FIELDS]
         ),
@@ -48,7 +63,7 @@ def search_google_maps(query: str, radius: int, limit: int, chat_id: str):
     # Prepare request body
     body = {
         "textQuery": query,
-        "pageSize": limit,
+        "pageSize": min(max(1, limit), 20),  # Ensure limit is between 1 and 20
     }
 
     # Add location bias if provided
@@ -60,19 +75,18 @@ def search_google_maps(query: str, radius: int, limit: int, chat_id: str):
                     "latitude": location["latitude"],
                     "longitude": location["longitude"],
                 },
-                "radius": radius,  # 5km radius
+                "radius": min(max(0, radius), 50000),  # Ensure radius is between 0 and 50km
             }
         }
 
     try:
-        logger.debug(
-            f"Making request to endpoint: {Config.GOOGLE_MAPS_SEARCH_ENDPOINT}"
-        )
-
+        logger.debug(f"Making request to endpoint: {Config.GOOGLE_MAPS_SEARCH_ENDPOINT}")
         logger.debug(f"Request body: {body}")
-        logger.debug(f"Request headers: {headers}")
+
         response = requests.post(
-            Config.GOOGLE_MAPS_SEARCH_ENDPOINT, headers=headers, json=body
+            Config.GOOGLE_MAPS_SEARCH_ENDPOINT, 
+            headers=headers, 
+            json=body
         )
         response.raise_for_status()
         data = response.json()
@@ -82,75 +96,103 @@ def search_google_maps(query: str, radius: int, limit: int, chat_id: str):
 
         if places:
             logger.debug(f"First result: {places[0]}")
+            # Store places in MongoDB
+            append_places(places)
+            
+            # Associate places with chat if chat_id provided
+            if chat_id:
+                old_places = get_chat_data_field(chat_id, "places", [])
+                new_places = [place.get("id") for place in places]
+                update_chat_data_field(chat_id, "places", old_places + new_places)
 
-        # Transform the response to match your application's expected format
-        append_places(places)
-        old_places = get_chat_data_field(chat_id, "places")
-        old_places.extend([place.get("id") for place in places])
-        update_chat_data_field(chat_id, "places", old_places)
-
+        # Remove photo data from response to reduce payload size
         return [{k: v for k, v in place.items() if k != "photos"} for place in places]
 
     except requests.exceptions.RequestException as e:
-        logger.error(f"Error in Google Maps search: {str(e)}", exc_info=True)
-        return {"error": str(e)}
+        error_msg = f"Error in Google Maps search: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        return {"error": error_msg}
     except Exception as e:
-        logger.error(f"Unexpected error in Google Maps search: {str(e)}", exc_info=True)
-        return {"error": f"Unexpected error: {str(e)}"}
+        error_msg = f"Unexpected error in Google Maps search: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        return {"error": error_msg}
 
 
-def describe_place(place_id: str, fields: list):
+def describe_place(place_id: str, fields: List[str]) -> Dict[str, Any]:
     """
-    Similar to search_google_maps, but allows specifying a custom subset of fields
-    from AVAILABLE_SEARCH_FIELDS via 'fields' argument.
+    Get detailed information about a specific place.
+
+    This function:
+    1. Validates requested fields
+    2. Fetches place details from Google Maps API
+    3. Updates MongoDB cache with new data
+
+    Args:
+        place_id (str): The Google Maps place ID
+        fields (list): List of fields to retrieve from AVAILABLE_SEARCH_FIELDS
+
+    Returns:
+        Dict[str, Any]: Place details for the requested fields
     """
     logger.info(f"Describing place with place_id: {place_id}, fields: {fields}")
 
+    # Validate fields
+    invalid_fields = [f for f in fields if f not in Constants.AVAILABLE_SEARCH_FIELDS]
+    if invalid_fields:
+        error_msg = f"Invalid fields requested: {invalid_fields}"
+        logger.error(error_msg)
+        return {"error": error_msg}
+
     # Prepare headers
     headers = {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": Config.GOOGLE_MAPS_API_KEY,
+        **api_client_manager.google_maps_headers,
         "X-Goog-FieldMask": ",".join(fields),
     }
 
     try:
-        logger.debug(
-            f"Making request to endpoint: {Config.GOOGLE_MAPS_SEARCH_ENDPOINT}"
-        )
-
+        logger.debug(f"Making request to: {Config.GOOGLE_MAPS_PLACES_ENDPOINT}")
         response = requests.get(
-            f"{Config.GOOGLE_MAPS_PLACES_ENDPOINT}/{place_id}", headers=headers
+            f"{Config.GOOGLE_MAPS_PLACES_ENDPOINT}/{place_id}", 
+            headers=headers
         )
-
         response.raise_for_status()
         data = response.json()
 
-        logger.info(f"Received response data: {data}")
-
-        # check if data is {}
         if not data:
-            return {"error": f"No data in google for {place_id}, and fields {fields}"}
+            error_msg = f"No data returned for {place_id}"
+            logger.warning(error_msg)
+            return {"error": error_msg}
 
+        logger.info(f"Successfully retrieved place details")
         return data
 
     except requests.exceptions.RequestException as e:
-        logger.error(f"Error in Google Maps describe place: {str(e)}", exc_info=True)
-        return {"error": str(e)}
+        error_msg = f"Error in Google Maps describe place: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        return {"error": error_msg}
     except Exception as e:
-        logger.error(
-            f"Unexpected error in Google Maps describe place: {str(e)}", exc_info=True
-        )
-        return {"error": f"Unexpected error: {str(e)}"}
+        error_msg = f"Unexpected error in Google Maps describe place: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        return {"error": error_msg}
 
 
-def get_stored_places_for_chat(chat_id: str):
+def get_stored_places_for_chat(chat_id: str) -> List[Dict[str, Any]]:
     """
-    Retrieves all stored places (from the MongoDB 'places' collection) for the given chat_id.
-    Returns a list with each place's place_id and editorialSummary.
+    Retrieve all stored places for a chat from MongoDB.
+
+    This function:
+    1. Gets the chat document to find associated place IDs
+    2. Retrieves minimal place data for each ID
+    3. Returns a summary of each place
+
+    Args:
+        chat_id (str): The chat ID to get places for
+
+    Returns:
+        List[Dict[str, Any]]: List of place summaries with place_id and editorialSummary
     """
     logger.info(f"Retrieving stored places for chat_id: {chat_id}")
 
-    # 1. Fetch the chat document to see what place_ids are stored
     chat_data = get_chat_data(chat_id)
     if not chat_data:
         logger.error(f"No chat data found for chat_id: {chat_id}")
@@ -161,47 +203,59 @@ def get_stored_places_for_chat(chat_id: str):
         logger.warning(f"No places found in chat_data for chat_id: {chat_id}")
         return []
 
-    logger.debug(f"Found {len(place_ids)} place_ids in chat_data: {place_ids}")
+    logger.debug(f"Found {len(place_ids)} place_ids in chat_data")
 
-    # 2. For each place_id, retrieve minimal fields from the places collection
+    # Get summaries for each place
     results = []
     for pid in place_ids:
-        # The place doc might contain editorialSummary or other fields
-        place_doc = get_place_summary(pid)
-        if place_doc:
+        if place_doc := get_place_summary(pid):
             results.append(place_doc)
         else:
-            logger.warning(f"No document found in 'places' for place_id {pid}")
+            logger.warning(f"No document found for place_id {pid}")
 
-    logger.info(f"Returning {len(results)} place documents for chat_id: {chat_id}")
+    logger.info(f"Returning {len(results)} place summaries")
     return results
 
 
-def get_images_for_place(place_id: str):
+def get_images_for_place(place_id: str) -> Union[List[Tuple[str, int, str]], Dict[str, str]]:
     """
-    Retrieves image URLs and their indices for the given place_id.
-    Returns a list of tuples containing (photo_url, photo_index, photo_name).
-    Skips photos that already have descriptions.
+    Get image URLs and metadata for a place.
+
+    This function:
+    1. Retrieves place data from MongoDB
+    2. Generates image URLs for each photo
+    3. Returns only photos without descriptions
+
+    Args:
+        place_id (str): The Google Maps place ID
+
+    Returns:
+        Union[List[Tuple[str, int, str]], Dict[str, str]]: 
+            List of tuples (photo_url, index, photo_name) or error dict
     """
     logger.info(f"Retrieving images for place_id: {place_id}")
+    
     place_data = get_place(place_id)
     if not place_data:
-        logger.error(f"No place data found for place_id: {place_id}")
-        return {"error": f"No place data found for {place_id}"}
+        error_msg = f"No place data found for place_id: {place_id}"
+        logger.error(error_msg)
+        return {"error": error_msg}
+        
     photos = place_data.get("photos", [])
 
     # Create list of tuples with (url, index, name), skip photos with descriptions
     photo_data = []
     for idx, photo in enumerate(photos):
-        # Skip if photo already has a description
         if photo.get("description"):
-            logger.debug(f"Skipping photo {idx} as it already has a description")
+            logger.debug(f"Skipping photo {idx} - already has description")
             continue
             
-        photo_name = photo.get("name")
-        if photo_name:
-            photo_url = f"{Config.GOOGLE_MAPS_PHOTOS_ENDPOINT}/{photo_name}/media?maxHeightPx=400&maxWidthPx=400&key={Config.GOOGLE_MAPS_API_KEY}"
+        if photo_name := photo.get("name"):
+            photo_url = (
+                f"{Config.GOOGLE_MAPS_PHOTOS_ENDPOINT}/{photo_name}/media"
+                f"?maxHeightPx=400&maxWidthPx=400&key={Config.GOOGLE_MAPS_API_KEY}"
+            )
             photo_data.append((photo_url, idx, photo_name))
 
-    logger.info(f"Found {len(photo_data)} photos without descriptions for place_id: {place_id}")
+    logger.info(f"Found {len(photo_data)} photos without descriptions")
     return photo_data

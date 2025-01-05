@@ -5,6 +5,7 @@ from utils.logger import logger
 import json
 from pymongo import UpdateOne
 from time import time
+from typing import Any
 
 # Initialize MongoDB client and get database
 MONGODB_URI = f"mongodb://{Config.MONGODB_USER}:{Config.MONGODB_PASSWORD}@{Config.MONGODB_HOST}/{Config.MONGODB_DATABASE}?authSource={Config.MONGODB_DATABASE}"
@@ -143,15 +144,24 @@ def update_chat_data_field(chat_id, field, value):
         raise
 
 
-def get_chat_data_field(chat_id, field):
-    logger.debug(f"Retrieving chat data field for ID: {chat_id}")
-    logger.debug(f"Field to retrieve: {field}")
-    try:
-        chat_data = get_chat_data(chat_id)
-        return chat_data.get(field)
-    except Exception as e:
-        logger.error(f"Error retrieving chat data field: {str(e)}", exc_info=True)
-        raise
+def get_chat_data_field(chat_id: str, field: str, default: Any = None) -> Any:
+    """
+    Get a specific field from a chat document.
+
+    Args:
+        chat_id (str): The chat ID to query
+        field (str): The field name to retrieve
+        default (Any, optional): Default value if field doesn't exist. Defaults to None.
+
+    Returns:
+        Any: The field value or default if not found
+    """
+    logger.debug(f"Getting field '{field}' from chat {chat_id}")
+    chat_data = get_chat_data(chat_id)
+    if not chat_data:
+        logger.warning(f"No chat data found for {chat_id}")
+        return default
+    return chat_data.get(field, default)
 
 
 def add_chat_message(chat_id, message):
