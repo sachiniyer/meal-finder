@@ -1,5 +1,5 @@
 # Use Python 3.9 slim image
-FROM python:3.9-slim
+FROM python:3.10.10-slim
 
 # Set working directory
 WORKDIR /app
@@ -28,7 +28,7 @@ RUN useradd -m myuser
 USER myuser
 
 # Expose the port the app runs on
-EXPOSE 5000
+EXPOSE 8000
 
 # Command to run the application
-CMD ["flask", "run", "--host=0.0.0.0"] 
+CMD ["flask", "run", "--host=0.0.0.0", "--port=8000"]

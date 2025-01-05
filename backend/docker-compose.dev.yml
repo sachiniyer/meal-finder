@@ -4,7 +4,7 @@ services:
     ports:
       - "127.0.0.1:27017:27017" # Restrict MongoDB to localhost
     volumes:
-      - mongodb_data:/data/db
+      - mongodb_data_dev:/data/db
       - ./mongo-init.sh:/docker-entrypoint-initdb.d/mongo-init.sh:ro
     networks:
       - app-network
@@ -41,4 +41,4 @@ networks:
     driver: bridge
 
 volumes:
-  mongodb_data:
+  mongodb_data_dev:
