@@ -19,10 +19,12 @@ I want to test my service that I wrote (I usually somewhat subscribe to Kent Bec
 - [ ] **Write basic evaluation method:** Write some basic evaluation method that I can use to judge my system against.
 
 ## P2
+#### Project
 - [ ] **Integrate with a menu provider:** I wanted to do this originally, but it costed too much (more details in [INFO.md](https://github.com/sachiniyer/meal-finder/blob/master/INFO.md#qa))
 - [ ] **Add a real authentication mechanism:** Integrate with some oauth providers like google/github
 - [ ] **Better citation method:** My citation method leaves something be desired, improve this.
 
+#### Project Configuration
 - [ ] **More resilient deployment:** This project with probably live on [my cluster](https://wiki.sachiniyer.com/#!index.md), so I need to write the yaml files for a kubernetes deployment
 - [ ] **Clean up the build system**
 - [ ] **Write github actions to run unit tests/E2E tests** 
