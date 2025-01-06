@@ -1,6 +1,6 @@
 # Why this Project?
 
-I don't really like doordash very much. I feel like that UI sucks me in, and I end up over-ordering food. I also recently wrote an [order assistant](https://github.com/sachiniyer/order-assistant) so I thought it would be interesting to write the other half of the food ordering workflow.
+Doordash feels are high, and the UI is un-intuitive to me. I also recently wrote an [order assistant](https://github.com/sachiniyer/order-assistant) so I thought it would be interesting to write the other half of the food ordering workflow.
 
 I also wanted to work on live data instead a dataset because:
 1. I have already messed around with big datasets (e.g. [Wikipedia Editor Analysis Project](https://github.com/sachiniyer/wikipedia-editor-analysis))

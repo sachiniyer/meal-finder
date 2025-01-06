@@ -25,7 +25,7 @@ I want to test my service that I wrote (I usually somewhat subscribe to Kent Bec
 - [ ] **Better citation method:** My citation method leaves something be desired, improve this.
 
 #### Project Configuration
-- [ ] **More resilient deployment:** This project with probably live on [my cluster](https://wiki.sachiniyer.com/#!index.md), so I need to write the yaml files for a kubernetes deployment
+- [ ] **More resilient deployment:** This project with probably live on [my cluster](https://wiki.sachiniyer.com/#!index.md), so I need to write the yaml files for a kubernetes deployment.
 - [ ] **Clean up the build system**
 - [ ] **Write github actions to run unit tests/E2E tests** 
 - [ ] **Clean up `requirements.txt`**
