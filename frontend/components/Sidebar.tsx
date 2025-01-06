@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useChat } from "../context/ChatContext";
 import { useToken } from "../context/TokenContext";
+import { getCookie, deleteCookie } from "../utils/cookies";
 
 interface Chat {
   chat_id: string;
@@ -20,9 +21,19 @@ export default function Sidebar() {
     // Listen for updates to the chat list
     const handleChats = (data: { chats: Chat[] }) => {
       const permanentChats = data.chats;
-      if (!initialLoadDone.current && permanentChats.length > 0) {
+      const initialChatId = getCookie("initial_chat_id");
+
+      if (initialChatId) {
+        setCurrentChatId(initialChatId);
+        deleteCookie("initial_chat_id");
+      } else if (
+        !initialLoadDone.current &&
+        permanentChats.length > 0 &&
+        currentChatId === null
+      ) {
         setCurrentChatId(permanentChats[0].chat_id);
       }
+
       const sorted = [...permanentChats].sort(
         (a, b) => b.created_at - a.created_at,
       );

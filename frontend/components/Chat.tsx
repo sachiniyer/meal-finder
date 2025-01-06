@@ -19,6 +19,7 @@ export default function Chat() {
   const { currentChatId, setCurrentChatId } = useChat();
   const { location, isLoading: locationLoading } = useLocation();
   const { token: _, resetToken, socket } = useToken();
+  const [isSharing, setIsSharing] = useState(false);
 
   const quickStartOptions = [
     "Find some bagels near me",
@@ -55,7 +56,7 @@ export default function Chat() {
     }) => {
       console.log("Received messages:", data.messages);
       const formatted = data.messages
-        .filter(msg => msg.role !== "tool")
+        .filter((msg) => msg.role !== "tool")
         .map((msg) => ({
           content: msg.content,
           sender: (msg.role === "user" ? "user" : "assistant") as
@@ -157,6 +158,19 @@ export default function Chat() {
     setInputValue("");
   };
 
+  const handleShare = async () => {
+    if (!currentChatId) return;
+
+    const shareUrl = `${window.location.origin}/chat/${currentChatId}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setIsSharing(true);
+      setTimeout(() => setIsSharing(false), 1000);
+    } catch (err) {
+      console.error("Failed to copy link:", err);
+    }
+  };
+
   // Show loading state while getting location
   if (locationLoading) {
     return (
@@ -250,9 +264,9 @@ export default function Chat() {
           ))}
         </div>
       )}
-      <div className="mt-4 flex shrink-0">
+      <div className="mt-4 flex shrink-0 gap-2">
         <input
-          className="flex-1 bg-gray-700 text-gray-100 px-4 py-3 rounded-lg mr-2 outline-none focus:ring-1 focus:ring-gray-500"
+          className="flex-1 bg-gray-700 text-gray-100 px-4 py-3 rounded-lg outline-none focus:ring-1 focus:ring-gray-500"
           type="text"
           placeholder={
             currentChatId === null
@@ -269,6 +283,23 @@ export default function Chat() {
         >
           Send
         </button>
+        {currentChatId && (
+          <button
+            onClick={handleShare}
+            className={`bg-gray-700 px-4 py-3 rounded-lg hover:bg-gray-600 transition-colors flex items-center
+              ${isSharing ? "animate-share-click" : ""}`}
+            title="Share chat link"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );

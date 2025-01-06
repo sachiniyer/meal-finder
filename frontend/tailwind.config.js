@@ -33,10 +33,15 @@ module.exports = {
         'fade-in': {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
+        },
+        'share-click': {
+          '0%, 100%': { backgroundColor: 'rgb(55 65 81)' }, // bg-gray-700
+          '50%': { backgroundColor: 'rgb(31 41 55)' }, // bg-gray-800
         }
       },
       animation: {
-        'fade-in': 'fade-in 0.25s ease-out'
+        'fade-in': 'fade-in 0.25s ease-out',
+        'share-click': 'share-click 1s ease-in-out'
       }
     }
   },
