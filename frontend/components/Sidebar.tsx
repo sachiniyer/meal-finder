@@ -113,7 +113,7 @@ export default function Sidebar() {
               clipRule="evenodd"
             />
           </svg>
-          <span>New Search</span>
+          <span>New Thread</span>
         </button>
       </div>
     </div>
