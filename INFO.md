@@ -28,7 +28,7 @@ flowchart TD
     nginx[NGINX]
     flask[Flask]
     mongodb[MongoDB]
-    openai[OpenAI Assistant]
+    assistant[OpenAI Assistant]
     aws[AWS Bedrock Image Descriptions]
     aws2[AWS Bedrock Image Understanding]
     maps[Google Maps Search]
@@ -73,11 +73,8 @@ Tool call definitions are in [constants.py](backend/utils/constants.py), and the
     
 ```mermaid
 flowchart TD
-    nextjs[NextJS]
-    nginx[NGINX]
-    flask[Flask]
     mongodb[MongoDB]
-    openai[OpenAI Assistant]
+    assistant[OpenAI Assistant]
     aws[AWS Bedrock Image Descriptions]
     aws2[AWS Bedrock Image Understanding]
     maps[Google Maps Search]
