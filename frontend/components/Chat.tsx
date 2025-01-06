@@ -54,14 +54,16 @@ export default function Chat() {
       messages: Array<{ content: string; role: string }>;
     }) => {
       console.log("Received messages:", data.messages);
-      const formatted = data.messages.map((msg) => ({
-        content: msg.content,
-        sender: (msg.role === "user" ? "user" : "assistant") as
-          | "user"
-          | "assistant"
-          | "tool",
-        id: Math.random().toString(),
-      }));
+      const formatted = data.messages
+        .filter(msg => msg.role !== "tool")
+        .map((msg) => ({
+          content: msg.content,
+          sender: (msg.role === "user" ? "user" : "assistant") as
+            | "user"
+            | "assistant"
+            | "tool",
+          id: Math.random().toString(),
+        }));
       setMessages(formatted);
     };
 
