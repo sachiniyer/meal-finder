@@ -187,7 +187,7 @@ export default function Chat() {
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`p-4 rounded-lg max-w-[80%] ${
+            className={`p-4 rounded-lg max-w-[80%] animate-fade-in ${
               msg.sender === "user"
                 ? "ml-auto bg-blue-600 text-white"
                 : msg.sender === "tool"
@@ -236,7 +236,7 @@ export default function Chat() {
         <div ref={messagesEndRef} />
       </div>
       {currentChatId === null && !quickStartClicked && (
-        <div className="grid grid-cols-4 gap-2 mb-4">
+        <div className="grid grid-cols-4 gap-2 mb-4 animate-fade-in">
           {quickStartOptions.map((option, index) => (
             <button
               key={index}
