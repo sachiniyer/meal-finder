@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { getCookie, setCookie } from "../utils/cookies";
 
 interface Location {
   latitude: number;
@@ -21,14 +22,33 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isLoading && !location) {
+      // Try to get location from cookie first
+      const cachedLocation = getCookie("userLocation");
+
+      if (cachedLocation) {
+        try {
+          const parsedLocation = JSON.parse(cachedLocation);
+          setLocation(parsedLocation);
+          setIsLoading(false);
+          return;
+        } catch (error) {
+          console.error("Error parsing cached location:", error);
+        }
+      }
+
+      // If no cached location, request new location
       console.log("fetching location");
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          console.log(position);
-          setLocation({
+          const newLocation = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
-          });
+          };
+
+          // Cache the location
+          setCookie("userLocation", JSON.stringify(newLocation));
+
+          setLocation(newLocation);
           setIsLoading(false);
         },
         (error) => {

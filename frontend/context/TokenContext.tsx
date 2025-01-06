@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { io, Socket } from "socket.io-client";
+import { getCookie, setCookie, deleteCookie } from "../utils/cookies";
 
 interface TokenContextType {
   token: string | null;
@@ -14,22 +15,6 @@ const TokenContext = createContext<TokenContextType>({
   resetToken: () => {},
   socket: null,
 });
-
-// 1) Helpers to read/set cookies
-function getCookie(name: string): string | null {
-  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-  return match ? decodeURIComponent(match[2]) : null;
-}
-
-function setCookie(name: string, value: string, days = 7) {
-  const expires = new Date();
-  expires.setDate(expires.getDate() + days);
-  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires.toUTCString()}; path=/`;
-}
-
-function deleteCookie(name: string) {
-  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-}
 
 export function TokenProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);

@@ -21,9 +21,11 @@ export default function Sidebar() {
     const handleChats = (data: { chats: Chat[] }) => {
       const permanentChats = data.chats;
       if (!initialLoadDone.current && permanentChats.length > 0) {
-        setCurrentChatId(permanentChats[permanentChats.length - 1].chat_id);
+        setCurrentChatId(permanentChats[0].chat_id);
       }
-      const sorted = [...permanentChats].sort((a, b) => b.created_at - a.created_at);
+      const sorted = [...permanentChats].sort(
+        (a, b) => b.created_at - a.created_at,
+      );
       setChats(sorted);
       initialLoadDone.current = true;
     };
@@ -60,8 +62,18 @@ export default function Sidebar() {
         <h1 className="text-xl font-bold text-white">Chats</h1>
       </div>
 
-      {/* Chat list */}
       <div className="flex-1 overflow-y-auto min-h-0">
+        {currentChatId === null && (
+          <div className="w-full p-4 bg-gray-800 border-l-4 border-blue-500">
+            <div className="text-sm text-gray-300">
+              {formatDate(Date.now() / 1000)}
+            </div>
+            <div className="text-white truncate">
+              New conversation...
+            </div>
+          </div>
+        )}
+
         {chats.map((chat) => (
           <button
             key={chat.chat_id}
@@ -80,7 +92,6 @@ export default function Sidebar() {
         ))}
       </div>
 
-      {/* New Chat button at bottom */}
       <div className="p-4 border-t border-gray-800 shrink-0">
         <button
           onClick={handleNewChat}
