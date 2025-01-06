@@ -14,11 +14,11 @@ yarn-error.log*
 
 package-lock.json
 
+# Next.js
 .next
+out
 
 # env files
 .env.local
 .env.*.local
 .vercel
-
-out/
