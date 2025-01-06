@@ -4,28 +4,52 @@ import { useChat } from "../context/ChatContext";
 import { useLocation } from "../context/LocationContext";
 import { useToken } from "../context/TokenContext";
 
-const backendUrl =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-
 interface Message {
   content: string;
   sender: "user" | "assistant" | "tool";
-  id: string; // Used to identify and remove tool messages
+  id: string;
 }
 
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [quickStartClicked, setQuickStartClicked] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { currentChatId, setCurrentChatId } = useChat();
   const { location, isLoading: locationLoading } = useLocation();
-  const { token, resetToken, socket } = useToken();
+  const { token: _, resetToken, socket } = useToken();
+
+  const quickStartOptions = [
+    "Find some bagels near me",
+    "Can you get the reviews for honeyhole in capitol hill seattle",
+    "What are the reviews for Ramen Danbo in West Village NYC",
+    "Are there vegan options at Mr. Charlie's in San Francisco",
+  ];
+
+  const handleQuickStart = (message: string) => {
+    if (socket && location) {
+      setQuickStartClicked(true);
+      setMessages((prev) => [
+        ...prev,
+        {
+          content: message,
+          sender: "user",
+          id: Date.now().toString(),
+        },
+      ]);
+
+      socket.emit("send_message", {
+        chat_id: currentChatId,
+        content: message,
+        location: location,
+      });
+    }
+  };
 
   useEffect(() => {
     if (!socket) return;
 
-    // Handle existing messages when loading a chat
     const handleMessages = (data: {
       messages: Array<{ content: string; role: string }>;
     }) => {
@@ -45,6 +69,7 @@ export default function Chat() {
     const handleMessage = (data: { content: string; chat_id?: string }) => {
       if (currentChatId === null && data.chat_id) {
         setCurrentChatId(data.chat_id);
+        setQuickStartClicked(false);
       }
       setMessages((prev) =>
         prev
@@ -210,11 +235,28 @@ export default function Chat() {
         ))}
         <div ref={messagesEndRef} />
       </div>
+      {currentChatId === null && !quickStartClicked && (
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          {quickStartOptions.map((option, index) => (
+            <button
+              key={index}
+              onClick={() => handleQuickStart(option)}
+              className="text-left p-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-100 transition-colors text-sm"
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="mt-4 flex shrink-0">
         <input
           className="flex-1 bg-gray-700 text-gray-100 px-4 py-3 rounded-lg mr-2 outline-none focus:ring-1 focus:ring-gray-500"
           type="text"
-          placeholder="Type your message..."
+          placeholder={
+            currentChatId === null
+              ? "What do you want to eat today?"
+              : "Ask a follow up..."
+          }
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}

@@ -12,7 +12,7 @@ export default function Sidebar() {
   const [chats, setChats] = useState<Chat[]>([]);
   const initialLoadDone = useRef(false);
   const { currentChatId, setCurrentChatId } = useChat();
-  const { token, resetToken, socket } = useToken();
+  const { token: _token, resetToken: _resetToken, socket } = useToken();
 
   useEffect(() => {
     if (!socket) return;
@@ -59,7 +59,7 @@ export default function Sidebar() {
   return (
     <div className="w-64 bg-gray-900 h-screen flex flex-col">
       <div className="p-4 border-b border-gray-800">
-        <h1 className="text-xl font-bold text-white">Chats</h1>
+        <h1 className="text-xl font-bold text-white">Meal Finder</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0">
@@ -68,9 +68,7 @@ export default function Sidebar() {
             <div className="text-sm text-gray-300">
               {formatDate(Date.now() / 1000)}
             </div>
-            <div className="text-white truncate">
-              New conversation...
-            </div>
+            <div className="text-white truncate">New conversation...</div>
           </div>
         )}
 
@@ -115,7 +113,7 @@ export default function Sidebar() {
               clipRule="evenodd"
             />
           </svg>
-          <span>New Chat</span>
+          <span>New Search</span>
         </button>
       </div>
     </div>

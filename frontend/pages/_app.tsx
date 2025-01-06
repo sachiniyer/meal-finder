@@ -8,7 +8,6 @@ import { ChatProvider } from "../context/ChatContext";
 import { TokenProvider } from "../context/TokenContext";
 
 function MyApp({ Component, pageProps }: AppProps) {
-  // Force dark mode for grayscale theme (you can toggle if needed)
   useEffect(() => {
     document.documentElement.classList.add("dark");
   }, []);
