@@ -203,7 +203,7 @@ class AssistantManager:
                     )
                 elif run_status.status in ["failed", "expired", "cancelled"]:
                     logger.error(f"Run failed with status: {run_status.status}")
-                    return f"Error: OpenAI assistant entered failed state, start a new chat {run_status.status}"
+                    return f"Error: OpenAI assistant entered failed state (state {run_status.status}), start a new chat"
 
             messages = self.openai_client.beta.threads.messages.list(
                 thread_id=thread_id
