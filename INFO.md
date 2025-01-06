@@ -96,7 +96,7 @@ flowchart TD
     assistant -- "fetch_chat_data()" --> mongodb
 ```
 
-*I was prefilling the domain originally, but in an edge case, the assistant prefilled the domain from a yelp review for me. I think performance may actually be better if I let the assistant choose the domain
+*For `search_website`: I was prefilling the domain originally, but in an edge case, the assistant prefilled the domain from a yelp review for me. I think performance may actually be better if I let the assistant choose the domain
 
 # Q/A
 
