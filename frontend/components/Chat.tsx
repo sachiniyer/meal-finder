@@ -20,6 +20,7 @@ export default function Chat() {
   const { location, isLoading: locationLoading } = useLocation();
   const { token: _, resetToken, socket } = useToken();
   const [isSharing, setIsSharing] = useState(false);
+  const [showCopied, setShowCopied] = useState(false);
 
   const quickStartOptions = [
     "Find some bagels near me",
@@ -165,7 +166,9 @@ export default function Chat() {
     try {
       await navigator.clipboard.writeText(shareUrl);
       setIsSharing(true);
+      setShowCopied(true);
       setTimeout(() => setIsSharing(false), 1000);
+      setTimeout(() => setShowCopied(false), 1000);
     } catch (err) {
       console.error("Failed to copy link:", err);
     }
@@ -284,21 +287,28 @@ export default function Chat() {
           Send
         </button>
         {currentChatId && (
-          <button
-            onClick={handleShare}
-            className={`bg-gray-700 px-4 py-3 rounded-lg hover:bg-gray-600 transition-colors flex items-center
-              ${isSharing ? "animate-share-click" : ""}`}
-            title="Share chat link"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
+          <div className="relative">
+            <button
+              onClick={handleShare}
+              className={`bg-gray-700 px-4 py-3 rounded-lg hover:bg-gray-600 transition-colors flex items-center
+                ${isSharing ? "animate-share-click" : ""}`}
+              title="Share chat link"
             >
-              <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
-            </svg>
-          </button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+              </svg>
+            </button>
+            {showCopied && (
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-sm rounded animate-fade-in">
+                Copied!
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
