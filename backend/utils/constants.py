@@ -212,23 +212,23 @@ TOOL_CONFIG = [
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_yelp_reviews",
-            "description": "Get Yelp reviews and ratings for a specific place. Use this after finding a place through Google Maps to get additional customer feedback.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "place_id": {
-                        "type": "string",
-                        "description": "The Google Maps place_id of the business to get reviews for",
-                    }
-                },
-                "required": ["place_id"],
-            },
-        },
-    },
+    # {
+    #     "type": "function",
+    #     "function": {
+    #         "name": "get_yelp_reviews",
+    #         "description": "Get Yelp reviews and ratings for a specific place. Use this after finding a place through Google Maps to get additional customer feedback.",
+    #         "parameters": {
+    #             "type": "object",
+    #             "properties": {
+    #                 "place_id": {
+    #                     "type": "string",
+    #                     "description": "The Google Maps place_id of the business to get reviews for",
+    #                 }
+    #             },
+    #             "required": ["place_id"],
+    #         },
+    #     },
+    # },
     {
         "type": "function",
         "function": {

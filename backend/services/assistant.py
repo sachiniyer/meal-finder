@@ -109,7 +109,8 @@ class AssistantManager:
             "Here are some common requests:\n"
             "1. To find restaurants use search_google_maps\n"
             "2. To get menus do the search_website tool and describe the images to see if there are any menu images\n"
-            "3. To look at ratings, use the describe_place tool with ratings (for google ratings) and use the yelp api\n"
+            "3. To look at ratings, use the describe_place tool with ratings (for google ratings)"
+            # "and use the yelp api\n"
             "4. Use the extract_image_info tool to more information about an image after using the describe_images tool\n"
             "5. Use the fetch_chat_data tool if you need a reminder of what happened in the conversation earlier",
             model=Config.OPENAI_MODEL_ID,
