@@ -248,10 +248,13 @@ class AssistantManager:
                 query_val = arguments.get("query", "")
                 radius_val = arguments.get("radius", 5000)
                 limit_val = arguments.get("limit", 5)
+                page_val = arguments.get("page", 0)
                 logger.debug(
-                    f"Executing Google Maps search with query: {query_val}, radius: {radius_val}, limit: {limit_val}"
+                    f"Executing Google Maps search with query: {query_val}, radius: {radius_val}, limit: {limit_val}, page: {page_val}"
                 )
-                return search_google_maps(query_val, radius_val, limit_val, chat_id)
+                return search_google_maps(
+                    query_val, radius_val, limit_val, page_val, chat_id
+                )
 
             elif function_name == "describe_place":
                 place_id = arguments.get("place_id", "")

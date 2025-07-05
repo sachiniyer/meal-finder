@@ -27,7 +27,8 @@ class Config:
 
     # Google Maps Configuration
     GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "google-maps-api-key")
-    # TODO(siyer): These endpoint's defaults have potentially duplicate info. Consider generating them from base.
+    # TODO(siyer): These endpoint's defaults have potentially duplicate info.
+    # Consider generating them from base.
     GOOGLE_MAPS_SEARCH_ENDPOINT = os.environ.get(
         "GOOGLE_MAPS_SEARCH_ENDPOINT",
         "https://places.googleapis.com/v1/places:searchText",

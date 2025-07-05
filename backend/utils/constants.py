@@ -118,6 +118,10 @@ TOOL_CONFIG = [
                         "type": "number",
                         "description": "The maximum number of places to return (default: 5). The limit must be between 0 and 20, inclusive",
                     },
+                    "page": {
+                        "type": "number",
+                        "description": "The page of results to retrieve. The default is 0",
+                    },
                 },
                 "required": ["query"],
             },
