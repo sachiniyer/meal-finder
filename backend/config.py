@@ -20,7 +20,7 @@ class Config:
 
     # OpenAI Configuration
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "open-api-key")
-    OPENAI_MODEL_ID = os.environ.get("OPENAI_MODEL_ID", "gpt-3.5-turbo-0613")
+    OPENAI_MODEL_ID = os.environ.get("OPENAI_MODEL_ID", "gpt-5.4-mini")
 
     # Yelp Configuration
     YELP_API_KEY = os.environ.get("YELP_API_KEY", "yelp-api-key")
