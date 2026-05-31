@@ -13,6 +13,7 @@ TODO(dev): Add retry logic for OpenAI API calls to handle rate limits.
 
 import json
 import os
+import time
 from openai import OpenAI
 from config import Config
 from services.mongo_manager import (
@@ -92,6 +93,14 @@ class AssistantManager:
                             assistant = self.openai_client.beta.assistants.retrieve(
                                 assistant_id
                             )
+                            if assistant.model != Config.OPENAI_MODEL_ID:
+                                logger.warning(
+                                    f"Cached assistant model ({assistant.model}) differs from configured model ({Config.OPENAI_MODEL_ID}), updating assistant"
+                                )
+                                assistant = self.openai_client.beta.assistants.update(
+                                    assistant_id,
+                                    model=Config.OPENAI_MODEL_ID,
+                                )
                             logger.info("Successfully retrieved existing assistant")
                             return assistant
                         except Exception as e:
@@ -203,8 +212,15 @@ class AssistantManager:
                         thread_id=thread_id, run_id=run.id, tool_outputs=tool_outputs
                     )
                 elif run_status.status in ["failed", "expired", "cancelled"]:
-                    logger.error(f"Run failed with status: {run_status.status}")
-                    return f"Error: OpenAI assistant entered failed state (state {run_status.status}), start a new chat"
+                    error_detail = ""
+                    if run_status.last_error:
+                        error_detail = f" ({run_status.last_error.code}: {run_status.last_error.message})"
+                    logger.error(
+                        f"Run failed with status: {run_status.status}{error_detail}"
+                    )
+                    return f"Error: OpenAI assistant entered failed state (state {run_status.status}){error_detail}, start a new chat"
+                else:
+                    time.sleep(1)
 
             messages = self.openai_client.beta.threads.messages.list(
                 thread_id=thread_id
