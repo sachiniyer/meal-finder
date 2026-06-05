@@ -43,12 +43,18 @@ class Config:
     )
 
     # AWS Bedrock Models
+    # NOTE(dev): Vision-capable Anthropic models (invoked with the Anthropic
+    # messages body). The previous Claude 3 / 3.5 models are EOL/legacy on
+    # Bedrock; Claude Haiku 4.5 (via the us. cross-region inference profile) is
+    # the current invokable vision model on this account.
     # NOTE(dev): This is the smaller model used to describe images
     BEDROCK_MICRO_MODEL = os.environ.get(
-        "BEDROCK_MICRO_MODEL", "amazon.nova-micro-v1:0"
+        "BEDROCK_MICRO_MODEL", "us.anthropic.claude-haiku-4-5-20251001-v1:0"
     )
     # NOTE(dev): This is the larger model used to extract info from images
-    BEDROCK_PRO_MODEL = os.environ.get("BEDROCK_PRO_MODEL", "amazon.nova-pro-v1:0")
+    BEDROCK_PRO_MODEL = os.environ.get(
+        "BEDROCK_PRO_MODEL", "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+    )
 
     # Cache Files
     ASSISTANT_CACHE_FILE = os.environ.get(
