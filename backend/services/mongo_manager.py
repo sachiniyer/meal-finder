@@ -34,7 +34,7 @@ def create_chat_data(location: dict):
     Returns:
         dict: The created chat document
 
-    NOTE(dev): Thread ID is initialized as None and set later when OpenAI requests are made
+    NOTE(dev): Response ID is initialized as None and set after the first OpenAI Responses API call
     """
     new_chat_id = str(uuid.uuid4())
     logger.info(f"Creating new chat with ID: {new_chat_id}")
@@ -43,7 +43,7 @@ def create_chat_data(location: dict):
         "chat_id": new_chat_id,
         "messages": [],
         "places": [],
-        "thread_id": None,
+        "response_id": None,
         "location": location,
         "created_at": int(time()),
     }

@@ -13,7 +13,7 @@ At a high level, I have the following components:
 2. NGINX for the reverse proxy
 3. Flask for the backend (with docker-compose for deployment)
 3. MongoDB for the database
-4. OpenAI assistant API for the agent
+4. OpenAI Responses API for the agent
 5. Many APIs
   - AWS Bedrock for image detection through claude models (dogfooding my service)
   - Google Maps for location data
@@ -28,7 +28,7 @@ flowchart TD
     nginx[NGINX]
     flask[Flask]
     mongodb[MongoDB]
-    assistant[OpenAI Assistant]
+    assistant[OpenAI Agent (Responses API)]
     aws[AWS Bedrock Image Descriptions]
     aws2[AWS Bedrock Image Understanding]
     maps[Google Maps Search]
@@ -67,14 +67,14 @@ flowchart TD
 
 The system caches data from each of the APIs to be retrieved again. Additionally, there is semi-intelligent linking between each of these APIs so that the assistant does not have to remember everything. 
 
-## Assistant Diagram
+## Agent Diagram
 
-Tool call definitions are in [constants.py](backend/utils/constants.py), and the assistant definition is in [assistant.py](backend/services/assistant.py)
+Tool call definitions are in [constants.py](backend/utils/constants.py), and the agent implementation is in [assistant.py](backend/services/assistant.py)
     
 ```mermaid
 flowchart TD
     mongodb[MongoDB]
-    assistant[OpenAI Assistant]
+    assistant[OpenAI Agent (Responses API)]
     aws[AWS Bedrock Image Descriptions]
     aws2[AWS Bedrock Image Understanding]
     maps[Google Maps Search]
